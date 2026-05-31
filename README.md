@@ -1,4 +1,4 @@
-# 🏆 HCMC AI Challenge 2026 — Nhóm 5
+# 🏆 HCMC AI Challenge 2026 — AIO_DataDominator
 
 > **Multimodal Agentic Video Retrieval System**  
 > Hệ thống truy xuất video đa phương thức với agent hỗ trợ query decomposition, hybrid indexing, temporal reranking và UI tương tác.
