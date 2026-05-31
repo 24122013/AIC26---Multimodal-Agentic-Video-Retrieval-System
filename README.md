@@ -435,4 +435,4 @@ Xem [`CONTRIBUTING.md`](CONTRIBUTING.md) để biết:
 
 ## License
 
-Internal — HCMC AI Challenge 2026, Nhóm 5.
+Internal — HCMC AI Challenge 2026, AIO_DataDominator.
