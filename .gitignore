@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Data (never commit raw data or large files)
+data/raw/
+data/embeddings/
+data/keyframes/
+data/segments/
+*.faiss
+*.bin
+*.npy
+*.parquet
+
+# Logs
+logs/*.jsonl
+logs/*.log
+
+# Models
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Environment
+.env
+.env.*
+*.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Notebooks output
+notebooks/.ipynb_checkpoints/

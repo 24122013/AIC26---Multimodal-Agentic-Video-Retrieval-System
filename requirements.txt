@@ -1,0 +1,56 @@
+# Core
+torch>=2.0.0
+torchvision>=0.15.0
+numpy>=1.24.0
+Pillow>=10.0.0
+pandas>=2.0.0
+
+# Video processing
+opencv-python>=4.8.0
+ffmpeg-python>=0.2.0
+
+# Embedding models
+open-clip-torch>=2.24.0
+transformers>=4.40.0
+sentence-transformers>=3.0.0
+
+# Vector databases
+faiss-cpu>=1.7.4
+qdrant-client>=1.9.0
+
+# Text search
+rank_bm25>=0.2.2
+
+# Multimodal / Captioning
+# blip2: via transformers
+# paddleocr: see below
+
+# OCR
+# paddlepaddle>=2.6.0  # install separately (GPU/CPU variant)
+# paddleocr>=2.7.0
+
+# ASR
+faster-whisper>=1.0.0
+
+# Object detection
+# ultralytics>=8.0.0  # YOLO-World
+
+# UI
+streamlit>=1.35.0
+fastapi>=0.111.0
+uvicorn>=0.30.0
+
+# Eval
+scipy>=1.12.0
+
+# Utils
+tqdm>=4.66.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+loguru>=0.7.2
+rich>=13.7.0
+
+# Dev tools
+black>=24.0.0
+ruff>=0.4.0
+pytest>=8.0.0
