@@ -1,4 +1,5 @@
 numpy>=1.26
+opencv-python>=4.9.0
 open-clip-torch>=2.24.0
 pillow>=10.0.0
 torch>=2.2.0

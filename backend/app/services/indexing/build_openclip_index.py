@@ -133,6 +133,7 @@ def encode_keyframes(
                         "shot_id": record.get("shot_id", ""),
                         "segment_id": record.get("segment_id", ""),
                         "timestamp": record["timestamp"],
+                        "frame_index": record.get("frame_index"),
                         "keyframe_path": record["keyframe_path"],
                         "thumbnail_path": record.get("thumbnail_path", record["keyframe_path"]),
                         "model_name": model_tag,

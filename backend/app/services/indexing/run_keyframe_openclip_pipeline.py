@@ -54,8 +54,15 @@ def parse_args() -> argparse.Namespace:
         help="Folder containing keyframe images for one video.",
     )
     parser.add_argument("--video-id", default=None)
+    parser.add_argument(
+        "--video-path",
+        type=Path,
+        default=None,
+        help="Optional source video. If provided, timestamp is computed from matched frame_index / fps.",
+    )
     parser.add_argument("--output-root", type=Path, default=Path("data"))
     parser.add_argument("--timestamp-interval-sec", type=float, default=2.0)
+    parser.add_argument("--search-window-sec", type=float, default=12.0)
     parser.add_argument("--min-width", type=int, default=16)
     parser.add_argument("--min-height", type=int, default=16)
     parser.add_argument("--model-name", default="ViT-B-16")
@@ -85,6 +92,8 @@ def main() -> None:
         keyframe_dir=args.keyframe_dir,
         video_id=video_id,
         timestamp_interval_sec=args.timestamp_interval_sec,
+        video_path=args.video_path,
+        search_window_sec=args.search_window_sec,
     )
     if not records:
         raise SystemExit(f"No keyframe images found in: {args.keyframe_dir}")

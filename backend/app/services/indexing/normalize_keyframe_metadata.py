@@ -4,6 +4,13 @@ import argparse
 import json
 from pathlib import Path
 
+try:
+    import cv2
+    import numpy as np
+except ImportError:
+    cv2 = None
+    np = None
+
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
@@ -29,18 +36,132 @@ def parse_keyframe_number(path: Path, fallback_index: int) -> int:
         return fallback_index
 
 
+def read_video_info(video_path: Path) -> tuple[float, int]:
+    if cv2 is None:
+        raise SystemExit(
+            "OpenCV is required when using --video-path. Install dependencies first."
+        )
+
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise ValueError(f"Cannot open video: {video_path}")
+
+    fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    cap.release()
+
+    if fps <= 0:
+        raise ValueError(f"Cannot read FPS from video: {video_path}")
+    if frame_count <= 0:
+        raise ValueError(f"Cannot read frame count from video: {video_path}")
+
+    return fps, frame_count
+
+
+def image_to_small_array(path: Path, size: tuple[int, int]) -> np.ndarray:
+    image = cv2.imread(str(path))
+    if image is None:
+        raise ValueError(f"Cannot read keyframe image: {path}")
+    image = cv2.resize(image, size, interpolation=cv2.INTER_AREA)
+    return image.astype(np.float32)
+
+
+def mse(left: np.ndarray, right: np.ndarray) -> float:
+    return float(np.mean((left - right) ** 2))
+
+
+def match_keyframes_to_video(
+    keyframe_paths: list[Path],
+    video_path: Path,
+    search_window_sec: float,
+    resize_width: int,
+    resize_height: int,
+) -> dict[Path, int]:
+    if cv2 is None or np is None:
+        raise SystemExit(
+            "OpenCV and NumPy are required when using --video-path. Install dependencies first."
+        )
+
+    fps, frame_count = read_video_info(video_path)
+    window_frames = max(1, int(round(search_window_sec * fps)))
+    resize_size = (resize_width, resize_height)
+    keyframes = [
+        (path, image_to_small_array(path, resize_size))
+        for path in keyframe_paths
+    ]
+    matches: dict[Path, int] = {}
+    previous_match = 0
+
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise ValueError(f"Cannot open video: {video_path}")
+
+    for index, (keyframe_path, keyframe_image) in enumerate(keyframes, start=1):
+        start_frame = 0 if index == 1 else previous_match
+        end_frame = min(frame_count - 1, start_frame + window_frames)
+        best_frame_index = start_frame
+        best_score = float("inf")
+
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+        current_frame = start_frame
+        while current_frame <= end_frame:
+            ok, frame = cap.read()
+            if not ok:
+                break
+
+            frame = cv2.resize(frame, resize_size, interpolation=cv2.INTER_AREA)
+            score = mse(keyframe_image, frame.astype(np.float32))
+            if score < best_score:
+                best_score = score
+                best_frame_index = current_frame
+
+            current_frame += 1
+
+        matches[keyframe_path] = best_frame_index
+        previous_match = best_frame_index
+        print(
+            f"Matched {keyframe_path.name}: frame_index={best_frame_index} "
+            f"timestamp={best_frame_index / fps:.3f}s mse={best_score:.2f}"
+        )
+
+    cap.release()
+    return matches
+
+
 def build_metadata_records(
     keyframe_dir: Path,
     video_id: str,
     timestamp_interval_sec: float,
+    video_path: Path | None = None,
+    search_window_sec: float = 12.0,
+    resize_width: int = 160,
+    resize_height: int = 90,
 ) -> list[dict]:
     records = []
-    for fallback_index, path in enumerate(iter_keyframe_paths(keyframe_dir), start=1):
+    keyframe_paths = iter_keyframe_paths(keyframe_dir)
+    fps = None
+    frame_index_by_path: dict[Path, int] = {}
+    if video_path is not None:
+        fps, _ = read_video_info(video_path)
+        frame_index_by_path = match_keyframes_to_video(
+            keyframe_paths=keyframe_paths,
+            video_path=video_path,
+            search_window_sec=search_window_sec,
+            resize_width=resize_width,
+            resize_height=resize_height,
+        )
+
+    for fallback_index, path in enumerate(keyframe_paths, start=1):
         keyframe_number = parse_keyframe_number(path, fallback_index)
         frame_id = f"FRAME_{video_id}_{keyframe_number:06d}"
         shot_id = f"SHOT_{video_id}_{keyframe_number:06d}"
         segment_id = f"SEG_{video_id}_{keyframe_number:06d}"
-        timestamp = round((keyframe_number - 1) * timestamp_interval_sec, 3)
+        frame_index = frame_index_by_path.get(path)
+        timestamp = (
+            round(frame_index / fps, 3)
+            if frame_index is not None and fps is not None
+            else round((keyframe_number - 1) * timestamp_interval_sec, 3)
+        )
         normalized_path = path.as_posix()
 
         records.append(
@@ -50,6 +171,7 @@ def build_metadata_records(
                 "shot_id": shot_id,
                 "segment_id": segment_id,
                 "timestamp": timestamp,
+                "frame_index": frame_index,
                 "keyframe_path": normalized_path,
                 "frame_path": normalized_path,
                 "thumbnail_path": normalized_path,
@@ -81,6 +203,15 @@ def parse_args() -> argparse.Namespace:
         default=Path("data/metadata/keyframes_L26_V200.jsonl"),
     )
     parser.add_argument("--timestamp-interval-sec", type=float, default=2.0)
+    parser.add_argument(
+        "--video-path",
+        type=Path,
+        default=None,
+        help="Optional source video. If provided, timestamp is computed as matched frame_index / video fps.",
+    )
+    parser.add_argument("--search-window-sec", type=float, default=12.0)
+    parser.add_argument("--match-resize-width", type=int, default=160)
+    parser.add_argument("--match-resize-height", type=int, default=90)
     return parser.parse_args()
 
 
@@ -94,6 +225,10 @@ def main() -> None:
         keyframe_dir=args.keyframe_dir,
         video_id=video_id,
         timestamp_interval_sec=args.timestamp_interval_sec,
+        video_path=args.video_path,
+        search_window_sec=args.search_window_sec,
+        resize_width=args.match_resize_width,
+        resize_height=args.match_resize_height,
     )
     if not records:
         raise SystemExit(f"No keyframe images found in: {args.keyframe_dir}")
