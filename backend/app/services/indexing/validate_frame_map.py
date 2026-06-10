@@ -8,7 +8,7 @@ Nhiệm vụ:
   5. Xuất báo cáo JSON
 
 Usage:
-    python validate_frame_map.py \\
+    python backend/app/services/indexing/validate_frame_map.py \\
         --frame-map data/metadata/openclip_vit_b16_frame_map.json \\
         --faiss-index data/indexes/openclip_vit_b16_flat_ip.faiss \\
         --report data/metadata/frame_map_validation_report.json \\
