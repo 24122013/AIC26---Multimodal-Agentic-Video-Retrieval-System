@@ -162,6 +162,8 @@ def build_metadata_records(
             if frame_index is not None and fps is not None
             else round((keyframe_number - 1) * timestamp_interval_sec, 3)
         )
+        timestamp_source = "matched_frame" if frame_index is not None else "interval"
+        timestamp_confidence = 0.9 if frame_index is not None else 0.5
         normalized_path = path.as_posix()
 
         records.append(
@@ -171,6 +173,8 @@ def build_metadata_records(
                 "shot_id": shot_id,
                 "segment_id": segment_id,
                 "timestamp": timestamp,
+                "timestamp_source": timestamp_source,
+                "timestamp_confidence": timestamp_confidence,
                 "frame_index": frame_index,
                 "keyframe_path": normalized_path,
                 "frame_path": normalized_path,

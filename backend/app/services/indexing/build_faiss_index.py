@@ -91,6 +91,28 @@ def build_index(vectors: np.ndarray, metric: str):
     return index
 
 
+def infer_timestamp_source(record: dict) -> str:
+    if record.get("timestamp_source"):
+        return record["timestamp_source"]
+    if record.get("frame_index") is not None:
+        return "matched_frame"
+    if record.get("timestamp") is not None:
+        return "interval"
+    return "unknown"
+
+
+def infer_timestamp_confidence(record: dict) -> float:
+    if record.get("timestamp_confidence") is not None:
+        return float(record["timestamp_confidence"])
+    source = infer_timestamp_source(record)
+    return {
+        "matched_frame": 0.9,
+        "video_fps": 1.0,
+        "interval": 0.5,
+        "unknown": 0.0,
+    }.get(source, 0.5)
+
+
 def checks_passed(checklist: dict[str, bool | None]) -> bool:
     return all(value is not False for value in checklist.values())
 
@@ -272,6 +294,8 @@ def main() -> None:
             "shot_id": record.get("shot_id", ""),
             "segment_id": record.get("segment_id", ""),
             "timestamp": record.get("timestamp"),
+            "timestamp_source": infer_timestamp_source(record),
+            "timestamp_confidence": infer_timestamp_confidence(record),
             "frame_index": record.get("frame_index"),
             "keyframe_path": record.get("keyframe_path"),
             "thumbnail_path": record.get("thumbnail_path", record.get("keyframe_path")),
